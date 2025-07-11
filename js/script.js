@@ -6,6 +6,7 @@ import { ToolManager } from './tools/tool-manager.js';
 import { ChatManager } from './chat/chat-manager.js';
 
 import { setupEventListeners } from './dom/events.js';
+import elements from './dom/elements.js';
 
 const url = getWebsocketUrl();
 const config = getConfig();
@@ -15,6 +16,7 @@ const toolManager = new ToolManager();
 toolManager.registerTool('googleSearch', new GoogleSearchTool());
 
 const chatManager = new ChatManager();
+chatManager.transcriptDisplay = elements.transcriptDisplay;
 
 const geminiAgent = new GeminiAgent({
     url,
