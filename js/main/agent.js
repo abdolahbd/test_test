@@ -320,7 +320,7 @@ export class GeminiAgent{
         // Just log transcription to console for now
         this.modelTranscriber.on('transcription', (transcript) => {
             this.emit('transcription', transcript);
-            console.debug('Model speech transcription:', transcript);
+            console.log('Model speech transcription:', transcript);
         });
 
         // Connect to Deepgram and execute promise
@@ -356,7 +356,7 @@ export class GeminiAgent{
         // Handle user transcription events
         this.userTranscriber.on('transcription', (transcript) => {
             this.emit('user_transcription', transcript);
-            console.debug('User speech transcription:', transcript);
+            console.log('User speech transcription:', transcript);
         });
 
         // Connect to Deepgram and execute promise

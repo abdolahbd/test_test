@@ -29,6 +29,12 @@ const geminiAgent = new GeminiAgent({
 // Handle chat-related events
 geminiAgent.on('transcription', (transcript) => {
     chatManager.updateStreamingMessage(transcript);
+    console.log('Transcript:', transcript);
+});
+
+// Log user's speech transcript
+geminiAgent.on('user_transcription', (transcript) => {
+    console.log('User transcript:', transcript);
 });
 
 geminiAgent.on('text_sent', (text) => {
