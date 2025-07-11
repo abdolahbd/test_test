@@ -12,6 +12,9 @@ const elements = {
     cameraPreview: document.getElementById('cameraPreview'),
     screenPreview: document.getElementById('screenPreview'),
 
+    // Transcript overlay
+    transcriptDisplay: document.getElementById('transcriptDisplay'),
+
     // Text input elements
     messageInput: document.getElementById('messageInput'),
     sendBtn: document.getElementById('sendBtn'),

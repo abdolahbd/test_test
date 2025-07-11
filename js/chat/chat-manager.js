@@ -1,6 +1,7 @@
 export class ChatManager {
     constructor() {
         this.chatContainer = document.getElementById('chatHistory');
+        this.transcriptDisplay = document.getElementById('transcriptDisplay');
         this.currentStreamingMessage = null;
         this.lastUserMessageType = null; // 'text' or 'audio'
         this.currentTranscript = ''; // Add this to store accumulated transcript
@@ -40,6 +41,10 @@ export class ChatManager {
         this.chatContainer.appendChild(messageDiv);
         this.currentStreamingMessage = messageDiv;
         this.currentTranscript = ''; // Reset transcript when starting new message
+        if (this.transcriptDisplay) {
+            this.transcriptDisplay.textContent = '';
+            this.transcriptDisplay.style.display = 'block';
+        }
         this.scrollToBottom();
     }
 
@@ -49,6 +54,9 @@ export class ChatManager {
         }
         this.currentTranscript += ' ' + text; // Append new text to the transcript
         this.currentStreamingMessage.textContent = this.currentTranscript;
+        if (this.transcriptDisplay) {
+            this.transcriptDisplay.textContent = this.currentTranscript;
+        }
         this.scrollToBottom();
     }
 
@@ -58,6 +66,10 @@ export class ChatManager {
             this.currentStreamingMessage = null;
             this.lastUserMessageType = null;
             this.currentTranscript = ''; // Reset transcript when finalizing
+            if (this.transcriptDisplay) {
+                this.transcriptDisplay.textContent = '';
+                this.transcriptDisplay.style.display = 'none';
+            }
         }
     }
 
@@ -70,5 +82,9 @@ export class ChatManager {
         this.currentStreamingMessage = null;
         this.lastUserMessageType = null;
         this.currentTranscript = '';
+        if (this.transcriptDisplay) {
+            this.transcriptDisplay.textContent = '';
+            this.transcriptDisplay.style.display = 'none';
+        }
     }
-} 
+}
