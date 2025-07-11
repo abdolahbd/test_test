@@ -1,7 +1,8 @@
 export class ChatManager {
     constructor() {
         this.chatContainer = document.getElementById('chatHistory');
-        this.transcriptDisplay = document.getElementById('transcriptDisplay');
+        // Disable overlay transcript display
+        this.transcriptDisplay = null;
         this.currentStreamingMessage = null;
         this.lastUserMessageType = null; // 'text' or 'audio'
         this.currentTranscript = ''; // Add this to store accumulated transcript
