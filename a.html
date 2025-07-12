@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gyroscope Demo</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 1rem;
+      font-family: sans-serif;
+      background: #121212;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 { margin-bottom: .5em; }
+    .reading { font-size: 1.2rem; margin: .3em 0; }
+    #btn-perm {
+      margin-top: 1em;
+      padding: .6em 1.2em;
+      font-size: 1rem;
+      background: #007aff;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Gyroscope Readings</h1>
+  <div id="status">Initializing…</div>
+  <div class="reading">X: <span id="x">—</span></div>
+  <div class="reading">Y: <span id="y">—</span></div>
+  <div class="reading">Z: <span id="z">—</span></div>
+
+  <button id="btn-perm" style="display:none">
+    Enable Motion Access
+  </button>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const xEl = document.getElementById('x');
+    const yEl = document.getElementById('y');
+    const zEl = document.getElementById('z');
+    const btn = document.getElementById('btn-perm');
+
+    function showError(msg) {
+      statusEl.textContent = msg;
+      statusEl.style.color = 'salmon';
+    }
+
+    // 1) Try Generic Sensor API
+    if ('Gyroscope' in window) {
+      try {
+        const sensor = new Gyroscope({ frequency: 60 });
+        sensor.addEventListener('reading', () => {
+          xEl.textContent = sensor.x.toFixed(2);
+          yEl.textContent = sensor.y.toFixed(2);
+          zEl.textContent = sensor.z.toFixed(2);
+          statusEl.textContent = 'Using Generic Sensor API';
+        });
+        sensor.addEventListener('error', e => {
+          console.error(e.error.name, e.error.message);
+          fallbackToDeviceOrientation();
+        });
+        sensor.start();
+      } catch (e) {
+        console.warn('Gyroscope sensor failed, falling back', e);
+        fallbackToDeviceOrientation();
+      }
+
+    // 2) Fallback to old DeviceOrientationEvent
+    } else {
+      fallbackToDeviceOrientation();
+    }
+
+    function fallbackToDeviceOrientation() {
+      if (typeof DeviceOrientationEvent === 'undefined') {
+        showError('No gyroscope support detected.');
+        return;
+      }
+
+      // iOS 13+ permission
+      if (DeviceOrientationEvent.requestPermission) {
+        btn.style.display = 'block';
+        statusEl.textContent = 'Permission required';
+        btn.onclick = () => {
+          DeviceOrientationEvent.requestPermission()
+            .then(res => {
+              if (res === 'granted') {
+                window.addEventListener('deviceorientation', handleOrient);
+                btn.style.display = 'none';
+              } else {
+                showError('Permission denied.');
+              }
+            })
+            .catch(err => {
+              console.error(err);
+              showError('Permission error.');
+            });
+        };
+      } else {
+        // other browsers
+        window.addEventListener('deviceorientation', handleOrient);
+      }
+    }
+
+    function handleOrient(event) {
+      // α/β/γ correspond roughly to Z/X/Y axis rotation
+      xEl.textContent = event.beta?.toFixed(2)  ?? '—';
+      yEl.textContent = event.gamma?.toFixed(2) ?? '—';
+      zEl.textContent = event.alpha?.toFixed(2) ?? '—';
+      statusEl.textContent = 'Using DeviceOrientationEvent';
+    }
+
+    // remind about HTTPS
+    if (location.protocol !== 'https:') {
+      showError('⚠️ Must be served over HTTPS for motion sensors.');
+    }
+  </script>
+</body>
+</html>
