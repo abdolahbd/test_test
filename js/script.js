@@ -32,6 +32,16 @@ geminiAgent.on('transcription', (transcript) => {
     console.log('Transcript:', transcript);
 });
 
+geminiAgent.on('content', (content) => {
+    const parts = content.modelTurn.parts;
+    for (const part of parts) {
+        if (part.text) {
+            chatManager.updateStreamingMessage(part.text);
+            console.log('Model text:', part.text);
+        }
+    }
+});
+
 // Log user's speech transcript
 geminiAgent.on('user_transcription', (transcript) => {
     console.log('User transcript:', transcript);
