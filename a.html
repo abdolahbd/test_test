@@ -1,136 +1,160 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no"/>
-  <title>Gyro Tilt Game</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gyro Flip Bottle Game</title>
   <style>
-    /* reset & full-screen body */
-    * { box-sizing: border-box; margin:0; padding:0; }
-    html, body { width:100%; height:100%; overflow:hidden; background:#222; font-family:sans-serif; }
-
-    /* playfield */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: sans-serif;
+      background: #e0f7fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     #game {
       position: relative;
-      width: 100%; height: 100%;
-      background: #444;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      display: flex; align-items: flex-end; justify-content: center;
     }
-
-    /* the player ball */
-    #ball {
+    .bottle-container {
       position: absolute;
-      width:40px; height:40px;
-      background: #e74c3c;
-      border-radius: 50%;
-      will-change: transform;
+      bottom: 0;
+      width: 50px; height: 130px;
+      transform-origin: bottom center;
+      transition: transform 0.2s ease-out;
     }
-
-    /* the target to catch */
-    #target {
+    /* simple bottle shape */
+    .bottle-container::before {
+      content: '';
       position: absolute;
-      width:30px; height:30px;
-      background: #2ecc71;
-      border-radius: 50%;
-      will-change: transform;
+      bottom: 0;
+      left: 0;
+      width: 50px; height: 100px;
+      background: #00796b;
+      border-radius: 25px 25px 10px 10px;
     }
-
-    /* score display */
-    #score {
+    .bottle-container::after {
+      content: '';
       position: absolute;
-      top: 10px; left: 10px;
-      color: #fff; font-size: 18px;
-      text-shadow: 1px 1px 2px #000;
+      bottom: 100px;
+      left: calc(50% - 8px);
+      width: 16px; height: 30px;
+      background: #004d40;
+      border-radius: 8px 8px 0 0;
+    }
+    #overlay {
+      position: absolute;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      text-align: center;
+      padding: 20px;
+      cursor: pointer;
+    }
+    #message {
+      position: absolute;
+      top: 20px;
+      font-size: 1.5rem;
+      color: #004d40;
+      text-shadow: 1px 1px 2px #fff;
     }
   </style>
 </head>
 <body>
   <div id="game">
-    <div id="ball"></div>
-    <div id="target"></div>
-    <div id="score">Score: 0</div>
+    <div class="bottle-container" id="bottle"></div>
+    <div id="message"></div>
+    <div id="overlay">Tap to start<br>(then flick your phone forward to flip the bottle)</div>
   </div>
 
   <script>
-    (() => {
-      const ball = document.getElementById('ball');
-      const target = document.getElementById('target');
-      const scoreEl = document.getElementById('score');
-      const game = document.getElementById('game');
+    const overlay = document.getElementById('overlay');
+    const bottle = document.getElementById('bottle');
+    const message = document.getElementById('message');
 
-      let width, height, rBall=20, rTarget=15;
-      let pos = { x:0, y:0 };
-      let orientation = { gamma:0, beta:0 };
-      let score = 0;
+    let isFlipping = false;
+    let vy = 0, angle = 0, angularVelocity = 0;
+    const g = 800; // gravity (px/s²)
 
-      // update game dimensions & reset start
-      function init() {
-        width = game.clientWidth;
-        height = game.clientHeight;
-        pos.x = width/2 - rBall;
-        pos.y = height/2 - rBall;
-        placeTarget();
-        updateScore();
-      }
+    function resetBottle() {
+      bottle.style.transform = '';
+      isFlipping = false;
+    }
 
-      // randomize target position inside bounds
-      function placeTarget() {
-        target.style.transform = 
-          `translate(
-             ${Math.random()*(width-2*rTarget)}px,
-             ${Math.random()*(height-2*rTarget)}px
-           )`;
-      }
+    function endFlip(success) {
+      message.textContent = success ? '🎉 You landed it!' : '😢 Try again';
+      setTimeout(() => {
+        message.textContent = '';
+        resetBottle();
+      }, 1500);
+    }
 
-      // display current score
-      function updateScore() {
-        scoreEl.textContent = `Score: ${score}`;
-      }
+    function animateFlip(startTime) {
+      function frame(now) {
+        const t = (now - startTime) / 1000; // seconds
+        // update vertical motion
+        const y = vy * t - 0.5 * g * t * t;
+        // update rotation
+        const currentAngle = angle + angularVelocity * t;
+        // apply transform
+        bottle.style.transform = `translateY(${-Math.max(0, y)}px) rotate(${currentAngle}deg)`;
 
-      // read device orientation
-      window.addEventListener('deviceorientation', e => {
-        // gamma: left/right tilt [-90,90], beta: front/back [-180,180]
-        orientation.gamma = e.gamma || 0;
-        orientation.beta  = e.beta  || 0;
-      });
-
-      // main loop
-      function loop() {
-        // map tilt into velocity
-        const vx = orientation.gamma / 90 * 5;  // adjust sensitivity
-        const vy = orientation.beta  / 90 * 5;
-
-        pos.x += vx;
-        pos.y += vy;
-
-        // keep ball in bounds
-        pos.x = Math.max(0, Math.min(pos.x, width - 2*rBall));
-        pos.y = Math.max(0, Math.min(pos.y, height - 2*rBall));
-
-        // move ball
-        ball.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
-
-        // check collision with target
-        const tRect = target.getBoundingClientRect();
-        const bRect = ball.getBoundingClientRect();
-        const dx = (bRect.left + rBall) - (tRect.left + rTarget);
-        const dy = (bRect.top  + rBall) - (tRect.top  + rTarget);
-        if (Math.hypot(dx, dy) < rBall + rTarget) {
-          score++;
-          updateScore();
-          placeTarget();
+        // landing detection
+        if (y <= 0 && t > 0.1) {
+          const landedAngle = currentAngle % 360;
+          const within = Math.abs((landedAngle + 360) % 360) < 20 || Math.abs((landedAngle + 360) % 360 - 360) < 20;
+          endFlip(within);
+        } else {
+          requestAnimationFrame(frame);
         }
-
-        requestAnimationFrame(loop);
       }
+      requestAnimationFrame(frame);
+    }
 
-      // on resize/orientation change: re-init
-      window.addEventListener('resize', init);
-      window.addEventListener('orientationchange', init);
+    function handleMotion(e) {
+      if (isFlipping) return;
+      const rate = e.rotationRate && e.rotationRate.beta;
+      if (!rate) return;
 
-      // start everything
-      init();
-      loop();
-    })();
+      const strength = Math.abs(rate);
+      if (strength > 15) {
+        isFlipping = true;
+        // map flick strength to initial velocities
+        vy = strength * 3;                // vertical speed
+        angularVelocity = strength * 8;   // degrees per second
+        angle = 0;
+        message.textContent = '';
+        animateFlip(performance.now());
+      }
+    }
+
+    function startGame() {
+      overlay.style.display = 'none';
+      // iOS 13+ permission
+      if (typeof DeviceMotionEvent !== 'undefined' && DeviceMotionEvent.requestPermission) {
+        DeviceMotionEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              window.addEventListener('devicemotion', handleMotion);
+            } else {
+              overlay.textContent = 'Permission denied';
+              overlay.style.display = 'flex';
+            }
+          })
+          .catch(console.error);
+      } else {
+        window.addEventListener('devicemotion', handleMotion);
+      }
+    }
+
+    overlay.addEventListener('click', startGame);
   </script>
 </body>
 </html>
