@@ -3,66 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gyro Flip Bottle Game</title>
+  <title>Realistic Gyro Flip Bottle</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body, html {
       width: 100%; height: 100%;
       overflow: hidden;
+      background: #e8f5e9;
+      display: flex; align-items: center; justify-content: center;
       font-family: sans-serif;
-      background: #e0f7fa;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
     #game {
       position: relative;
       width: 100vw; height: 100vh;
-      overflow: hidden;
-      display: flex; align-items: flex-end; justify-content: center;
     }
     .bottle-container {
       position: absolute;
-      bottom: 0;
+      left: 50%; bottom: 0;
       width: 50px; height: 130px;
-      transform-origin: bottom center;
-      transition: transform 0.2s ease-out;
+      /* rotate around center of the bottle */
+      transform-origin: 50% 50%;
     }
     /* simple bottle shape */
     .bottle-container::before {
       content: '';
       position: absolute;
-      bottom: 0;
-      left: 0;
+      left: 0; top: 0;
       width: 50px; height: 100px;
-      background: #00796b;
+      background: #388e3c;
       border-radius: 25px 25px 10px 10px;
     }
     .bottle-container::after {
       content: '';
       position: absolute;
-      bottom: 100px;
-      left: calc(50% - 8px);
+      top: -30px; left: 50%; 
+      transform: translateX(-50%);
       width: 16px; height: 30px;
-      background: #004d40;
+      background: #2e7d32;
       border-radius: 8px 8px 0 0;
     }
     #overlay {
       position: absolute;
-      width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.5);
-      color: #fff;
+      width: 100%; height: 100%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.2rem;
-      text-align: center;
-      padding: 20px;
-      cursor: pointer;
+      background: rgba(0,0,0,0.5);
+      color: #fff; font-size: 1.2rem; text-align: center;
+      padding: 20px; cursor: pointer;
     }
     #message {
       position: absolute;
-      top: 20px;
-      font-size: 1.5rem;
-      color: #004d40;
+      top: 1rem; width: 100%; text-align: center;
+      font-size: 1.5rem; color: #2e7d32;
       text-shadow: 1px 1px 2px #fff;
     }
   </style>
@@ -71,46 +62,55 @@
   <div id="game">
     <div class="bottle-container" id="bottle"></div>
     <div id="message"></div>
-    <div id="overlay">Tap to start<br>(then flick your phone forward to flip the bottle)</div>
+    <div id="overlay">
+      Tap to start<br>
+      (then flick your phone forward to flip the bottle)
+    </div>
   </div>
 
   <script>
     const overlay = document.getElementById('overlay');
-    const bottle = document.getElementById('bottle');
-    const message = document.getElementById('message');
+    const bottle  = document.getElementById('bottle');
+    const msg     = document.getElementById('message');
 
+    // physics vars
     let isFlipping = false;
-    let vy = 0, angle = 0, angularVelocity = 0;
-    const g = 800; // gravity (px/s²)
+    let vx = 0, vy = 0, initialAngle = -90, angularVel = 0;
+    const g = 1000; // px/s²
 
+    // place bottle horizontally at center-bottom
     function resetBottle() {
-      bottle.style.transform = '';
       isFlipping = false;
+      msg.textContent = '';
+      // translateX(-50%) + no motion, rotated -90° = horizontal
+      bottle.style.transform = 
+        `translate(calc(-50% + 0px), 0px) rotate(${initialAngle}deg)`;
     }
 
     function endFlip(success) {
-      message.textContent = success ? '🎉 You landed it!' : '😢 Try again';
-      setTimeout(() => {
-        message.textContent = '';
-        resetBottle();
-      }, 1500);
+      msg.textContent = success ? '🎉 You landed it!' : '😢 Try again';
+      setTimeout(resetBottle, 1500);
     }
 
-    function animateFlip(startTime) {
+    function animateFlip(startTs) {
       function frame(now) {
-        const t = (now - startTime) / 1000; // seconds
-        // update vertical motion
+        const t = (now - startTs) / 1000; // seconds
+        // positions
+        const x = vx * t;
         const y = vy * t - 0.5 * g * t * t;
-        // update rotation
-        const currentAngle = angle + angularVelocity * t;
-        // apply transform
-        bottle.style.transform = `translateY(${-Math.max(0, y)}px) rotate(${currentAngle}deg)`;
+        // rotation
+        const angle = initialAngle + angularVel * t;
+        // apply: horizontal + vertical + rotate
+        bottle.style.transform = 
+          `translate(calc(-50% + ${x}px), ${-Math.max(0, y)}px) rotate(${angle}deg)`;
 
         // landing detection
         if (y <= 0 && t > 0.1) {
-          const landedAngle = currentAngle % 360;
-          const within = Math.abs((landedAngle + 360) % 360) < 20 || Math.abs((landedAngle + 360) % 360 - 360) < 20;
-          endFlip(within);
+          // normalize angle to [0,360)
+          const a = ((angle % 360) + 360) % 360;
+          // check if close to 0° (upright)
+          const landed = (a < 20 || a > 340);
+          endFlip(landed);
         } else {
           requestAnimationFrame(frame);
         }
@@ -122,26 +122,26 @@
       if (isFlipping) return;
       const rate = e.rotationRate && e.rotationRate.beta;
       if (!rate) return;
-
       const strength = Math.abs(rate);
       if (strength > 15) {
         isFlipping = true;
-        // map flick strength to initial velocities
-        vy = strength * 3;                // vertical speed
-        angularVelocity = strength * 8;   // degrees per second
-        angle = 0;
-        message.textContent = '';
+        // map flick strength to velocities
+        vx = strength * 4;         // horizontal speed
+        vy = strength * 2.5;       // vertical lift
+        angularVel = strength * 10; // deg/s
         animateFlip(performance.now());
       }
     }
 
     function startGame() {
       overlay.style.display = 'none';
-      // iOS 13+ permission
-      if (typeof DeviceMotionEvent !== 'undefined' && DeviceMotionEvent.requestPermission) {
+      resetBottle();
+      // request iOS motion permission if needed
+      if (typeof DeviceMotionEvent !== 'undefined' &&
+          DeviceMotionEvent.requestPermission) {
         DeviceMotionEvent.requestPermission()
-          .then(permissionState => {
-            if (permissionState === 'granted') {
+          .then(p => {
+            if (p === 'granted') {
               window.addEventListener('devicemotion', handleMotion);
             } else {
               overlay.textContent = 'Permission denied';
@@ -155,6 +155,8 @@
     }
 
     overlay.addEventListener('click', startGame);
+    // initial setup
+    resetBottle();
   </script>
 </body>
 </html>
