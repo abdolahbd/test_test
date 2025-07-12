@@ -23,7 +23,9 @@ export const getConfig = () => ({
         temperature: parseFloat(localStorage.getItem('temperature')) || 1.8,
         top_p: parseFloat(localStorage.getItem('top_p')) || 0.95,
         top_k: parseInt(localStorage.getItem('top_k')) || 65,
-        responseModalities: "audio",
+        // Request both audio and text so we can show transcripts without
+        // relying solely on the external transcriber.
+        responseModalities: ["AUDIO", "TEXT"],
         speechConfig: {
             voiceConfig: { 
                 prebuiltVoiceConfig: { 
